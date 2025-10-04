@@ -37,7 +37,8 @@ export async function POST(req: Request) {
 
     // Gera o JWT
     const token = issueJwt({
-      id: user.telegramId,
+      id: user.id,
+      telegramId: user.telegramId,
       username: user.username ?? undefined,
       first_name: user.first_name,
       last_name: user.last_name ?? undefined,

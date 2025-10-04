@@ -15,9 +15,10 @@ export async function verifyTelegramInitData(initDataRaw: string) {
   return data;  // objeto contendo user, auth_date, etc
 }
 
-export function issueJwt(userData: { id: number; username?: string; first_name: string; last_name?: string; }) {
+export function issueJwt(userData: { id: number; telegramId:number; username?: string; first_name: string; last_name?: string; }) {
   const payload = {
-    telegramId: userData.id,
+    id: userData.id,
+    telegramId: userData.telegramId,
     username: userData.username,
     firstName: userData.first_name,
     lastName: userData.last_name,

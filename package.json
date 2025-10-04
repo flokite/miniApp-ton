@@ -11,6 +11,8 @@
     "@prisma/client": "^6.16.3",
     "@telegram-apps/init-data-node": "^2.0.10",
     "@tma.js/sdk": "^2.7.0",
+    "@ton/ton": "^15.4.0",
+    "@tonconnect/ui-react": "^2.3.1",
     "jose": "^6.1.0",
     "jsonwebtoken": "^9.0.2",
     "next": "15.5.4",

@@ -9,16 +9,12 @@ export const runtime = 'edge';
 // Rotas que requerem autenticação
 const protectedRoutes = [
   '/home',
-  '/profile',
-  '/admin',
-  '/api/protected'
+  '/api/protegido/:path*'
 ];
 
 // Rotas públicas (não precisam de autenticação)
 const publicRoutes = [
   '/',
-  '/login',
-  '/register',
   '/api/auth'
 ];
 
@@ -86,11 +82,7 @@ export const config = {
   matcher: [
     '/home',
     '/home/:path*',
-    '/profile',
-    '/profile/:path*',
-    '/admin',
-    '/admin/:path*',
-    '/api/protected',
-    '/api/protected/:path*'
+    '/api/protegido',
+    '/api/protegido/:path*'
   ],
 };
