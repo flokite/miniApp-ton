@@ -19,3 +19,11 @@ model Pessoa {
   email String @unique
   name String?
 }
+
+model User {
+  id         Int      @id @default(autoincrement())
+  telegramId Int      @unique
+  username   String?  
+  first_name String
+  last_name  String?  
+}
