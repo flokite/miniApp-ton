@@ -1,4 +1,3 @@
-// app/api/auth/telegram/route.ts
 import { NextResponse } from 'next/server';
 import { verifyTelegramInitData, issueJwt } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -29,6 +28,7 @@ export async function POST(req: Request) {
         data: {
           telegramId: id,
           username,
+          wallet: undefined,
           first_name,
           last_name,
         },

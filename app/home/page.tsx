@@ -1,6 +1,9 @@
+import ConnectWalletButton from "@/components/ConnectWallet";
 import { prisma } from "../../lib/prisma";
 
 import { cookies } from "next/headers";
+import { DepositoButton } from "@/components/FormDeposito";
+import { SaqueButton } from "@/components/FormSaque";
 
 export default async function home ()
 {
@@ -19,7 +22,10 @@ export default async function home ()
             <li>Nome: { pessoa?.first_name }</li>
             <li>Sobrenome: { pessoa?.last_name }</li>
             <li>Quantidade de cadastros: { qnt }</li>
+            <li>Wallet: { pessoa?.wallet }</li>
             <li>Token JWT: {token}</li>
+            <li><ConnectWalletButton /></li>
+            <li><SaqueButton /></li>
         </div>
     );
 }

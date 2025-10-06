@@ -1,5 +1,7 @@
 {
-  "url": "<app-url>",                      
-  "name": "<app-name>",                      
-  "iconUrl": "<app-icon-url>"             
+  "url": "https://unperpendicularly-noncatechistical-angelo.ngrok-free.dev/",
+  "name": "Mini app teste",
+  "iconUrl": "https://unperpendicularly-noncatechistical-angelo.ngrok-free.dev/apple-touch-icon.png",
+  "termsOfUseUrl": "https://unperpendicularly-noncatechistical-angelo.ngrok-free.dev/terms-of-use.txt",
+  "privacyPolicyUrl": "https://unperpendicularly-noncatechistical-angelo.ngrok-free.dev/privacy-policy.txt"
 }

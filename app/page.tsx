@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { retrieveLaunchParams } from '@tma.js/sdk';
 
 export default function HomePage() {
-console.log('teste');
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -1,61 +1,162 @@
-import type { NextApiRequest, NextApiResponse } from "next";
-import { prisma } from "@/lib/prisma";
-import { TonClient, WalletContractV4, internal } from "@ton/ton";
-import { mnemonicToPrivateKey } from "@ton/crypto";
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { jwtVerify } from 'jose';
+import { TonSender } from '@/lib/tonSender';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== "POST") return res.status(405).end();
+const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 
-  try {
-    const { userId, amount } = req.body;
+// Inicializa o sender
+const tonSender = new TonSender();
 
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) return res.status(404).json({ error: "Usuário não encontrado" });
-    if (!user.wallet) return res.status(400).json({ error: "Usuário não tem carteira cadastrada" });
-    if (user.saldo < amount) return res.status(400).json({ error: "Saldo insuficiente" });
-
-    // Cria saque pendente e decrementa saldo
-    const saque = await prisma.saque.create({
-      data: { userId, amount, status: "pending" },
-    });
-    await prisma.user.update({
-      where: { id: userId },
-      data: { saldo: { decrement: amount } },
-    });
-
-    // TonClient + Wallet V4
-    const client = new TonClient({ endpoint: process.env.TON_RPC_URL! });
-    const mnemonicArray = process.env.WALLET_MNEMONICS!.split(" "); // ⚠️ array
-    const keyPair = await mnemonicToPrivateKey(mnemonicArray);
-
-    const walletContract = WalletContractV4.create({ workchain: 0, publicKey: keyPair.publicKey });
-    const contract = client.open(walletContract);
-
-    const seqno = await contract.getSeqno();
-
-    // Cria transferência interna
-    const transferCell = await contract.createTransfer({
-      seqno,
-      secretKey: keyPair.secretKey,
-      messages: [internal({
-        value: String(amount),
-        to: user.wallet,
-        body: "Saque dev/testnet",
-      })]
-    });
-
-    const bocBase64 = transferCell.toBoc().toString("base64");
-
-    // Atualiza saque com BOC e status broadcasted
-    await prisma.saque.update({
-      where: { id: saque.id },
-      data: { txHash: bocBase64, status: "broadcasted" },
-    });
-
-    res.status(200).json({ ok: true, boc: bocBase64, saqueId: saque.id });
-
-  } catch (err: any) {
-    console.error(err);
-    res.status(500).json({ error: err.message || "Erro interno" });
+async function initializeSender() {
+  if (!process.env.WALLET_MNEMONIC) {
+    throw new Error('WALLET_MNEMONIC não configurada');
   }
+  
+  const mnemonic = process.env.WALLET_MNEMONIC.split(' ');
+  await tonSender.initialize(mnemonic);
+}
+
+initializeSender().catch(console.error);
+
+export async function POST(request: NextRequest) {
+  try {
+    // 1. Verifica autenticação
+    const token = request.cookies.get('token')?.value;
+    if (!token) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    }
+
+    const { payload } = await jwtVerify(token, secret);
+    const userId = payload.id as number;
+    
+    if (!userId) {
+      return NextResponse.json({ error: 'Usuário inválido' }, { status: 401 });
+    }
+
+    // 2. Pega dados do saque
+    const { amount } = await request.json();
+
+    if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+      return NextResponse.json(
+        { error: 'Valor inválido para saque' },
+        { status: 400 }
+      );
+    }
+
+    const saqueAmount = parseFloat(amount);
+
+    // 3. Busca usuário com saldo
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, wallet: true, saldo: true }
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Usuário não encontrado' },
+        { status: 404 }
+      );
+    }
+
+    if (!user.wallet) {
+      return NextResponse.json(
+        { error: 'Carteira não vinculada' },
+        { status: 400 }
+      );
+    }
+
+    // 4. Verifica saldo disponível
+    if (!user.saldo || user.saldo < saqueAmount) {
+      return NextResponse.json(
+        { error: 'Saldo insuficiente' },
+        { status: 400 }
+      );
+    }
+
+    // 5. Inicia transação no banco
+    const saque = await prisma.saque.create({
+      data: {
+        userId: userId,
+        amount: saqueAmount,
+        status: 'pending',
+      }
+    });
+
+    try {
+      // 6. ENVIA TON da sua carteira para a carteira do usuário
+      const sendResult = await tonSender.sendTon(
+        user.wallet, 
+        saqueAmount,
+        `Saque - User ${userId}`
+      );
+
+      if (!sendResult.success) {
+        // Atualiza saque como failed
+        await prisma.saque.update({
+          where: { id: saque.id },
+          data: { status: 'failed' }
+        });
+
+        return NextResponse.json(
+          { error: `Falha ao processar saque: ${sendResult.error}` },
+          { status: 500 }
+        );
+      }
+
+      // 7. Atualiza saldo do usuário e status do saque
+      await prisma.$transaction([
+        // Diminui saldo do usuário
+        prisma.user.update({
+          where: { id: userId },
+          data: { 
+            saldo: { decrement: saqueAmount }
+          }
+        }),
+        // Atualiza saque para completed
+        prisma.saque.update({
+          where: { id: saque.id },
+          data: { 
+            status: 'completed',
+            txHash: sendResult.hash
+          }
+        })
+      ]);
+
+      return NextResponse.json({
+        success: true,
+        message: 'Saque realizado com sucesso!',
+        transactionHash: sendResult.hash,
+        saque: {
+          id: saque.id,
+          amount: saque.amount,
+          status: 'completed',
+          newBalance: user.saldo - saqueAmount
+        }
+      });
+
+    } catch (error) {
+      // Em caso de erro na transação TON, marca como failed
+      await prisma.saque.update({
+        where: { id: saque.id },
+        data: { status: 'failed' }
+      });
+
+      throw error;
+    }
+
+  } catch (err) {
+    console.error('Erro no saque:', err);
+    return NextResponse.json(
+      { 
+        error: 'Erro interno do servidor',
+        details: err instanceof Error ? err.message : 'Erro desconhecido'
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 200 });
 }

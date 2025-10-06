@@ -11,7 +11,7 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = "file:./dev.db"
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -20,7 +20,7 @@ model User {
   username   String?  
   first_name String
   last_name  String?
-  wallet       String?   @unique
+  wallet       String?  
   saldo Int @default(0)
   createdAt    DateTime @default(now())
   deposito Deposito[]

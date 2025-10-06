@@ -4,7 +4,7 @@ import type { NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
 
 // Definir runtime Edge
-export const runtime = 'edge';
+export const runtime = 'experimental-edge';
 
 // Rotas que requerem autenticação
 const protectedRoutes = [
