@@ -7,6 +7,7 @@ import {
 } from "@tonconnect/ui-react";
 import { useEffect, useState } from "react";
 import { DepositoButton } from "../FormDeposito";
+import { SaqueButton } from "../FormSaque";
 
 function WalletButtonInner() {
   const walletAddress = useTonAddress();

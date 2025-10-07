@@ -18,7 +18,7 @@ export async function GET() {
     // Cria o cliente para a Testnet
     const client = new TonClient({
         endpoint: 'https://testnet.toncenter.com/api/v2/jsonRPC',
-        apiKey: process.env.TONCENTER_API_KEY || ''
+        //apiKey: process.env.TONCENTER_API_KEY || ''
     });
 
     try {

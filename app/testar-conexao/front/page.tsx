@@ -1,4 +1,3 @@
-// app/testar-conexão/page.tsx
 'use client'; // Deve ser Client Component para usar useState e useEffect
 
 import React, { useState, useEffect } from 'react';
